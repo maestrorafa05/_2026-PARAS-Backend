@@ -10,11 +10,10 @@
 using System;
 using System.Reflection;
 
-[assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsIdAttribute("49a3d2d0-7c13-423e-af15-15532d78e035")]
 [assembly: System.Reflection.AssemblyCompanyAttribute("PARAS.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+297d3bde5caa40c737665bef595b800612f7cf66")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0b1db1f86ccb82cc4738887aa2b9610a6ad886c4")]
 [assembly: System.Reflection.AssemblyProductAttribute("PARAS.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PARAS.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
