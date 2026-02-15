@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Scalar.AspNetCore;
+using PARAS.Api.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,13 +50,10 @@ app.UseCors("Frontend");
 // hanya tampilkan dokumentasi API di lingkungan development
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi(); 
-    app.MapScalarApiReference();  
+    app.MapOpenApiEndpoints();
 }
 
 // endpoint root untuk memeriksa status layanan
-app.MapGet("/", () => Results.Ok(new {service = "PARAS API", status = "up"})).WithTags("System");
-// endpoint health check untuk memantau kesehatan aplikasi
-app.MapHealthChecks("/health").WithTags("System");
+app.MapSystemEndpoints();
 
 app.Run();
