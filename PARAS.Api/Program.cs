@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Scalar.AspNetCore;
 using PARAS.Api.Endpoints;
+using Microsoft.EntityFrameworkCore;
+using PARAS.Api.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +21,9 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader()
             .AllowAnyMethod());
 });
+
+// db context untuk akses database
+builder.Services.AddDbContext<ParasDbContext>(opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // health checks untuk memantau kesehatan aplikasi
 builder.Services.AddHealthChecks();
