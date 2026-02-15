@@ -1,41 +1,61 @@
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
+using Scalar.AspNetCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+// open api untuk dokumentasi API
 builder.Services.AddOpenApi();
+
+// problem details untuk error handling
+builder.Services.AddProblemDetails();
+
+// cors untuk mengizinkan akses dari frontend
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", PolicyEnforcement =>
+        PolicyEnforcement.WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod());
+});
+
+// health checks untuk memantau kesehatan aplikasi
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// global error handling menggunakan problem details
+app.UseExceptionHandler(exceptionApp =>
+{
+    exceptionApp.Run(async context =>
+    {
+        var error = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+        var problem = new ProblemDetails
+        {
+            Title = "Unexpected error",
+            Detail = app.Environment.IsDevelopment() ? error?.Message : "An error occured.",
+            Status = StatusCodes.Status500InternalServerError
+        };
+
+        context.Response.StatusCode = problem.Status.Value;
+        await context.Response.WriteAsJsonAsync(problem);
+    });
+});
+
+// middleware untuk mengaktifkan https, cors, dan dokumentasi API
+app.UseHttpsRedirection();
+app.UseCors("Frontend");
+
+// hanya tampilkan dokumentasi API di lingkungan development
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.MapOpenApi(); 
+    app.MapScalarApiReference();  
 }
 
-app.UseHttpsRedirection();
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+// endpoint root untuk memeriksa status layanan
+app.MapGet("/", () => Results.Ok(new {service = "PARAS API", status = "up"})).WithTags("System");
+// endpoint health check untuk memantau kesehatan aplikasi
+app.MapHealthChecks("/health").WithTags("System");
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
