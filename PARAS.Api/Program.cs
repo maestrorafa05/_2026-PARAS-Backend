@@ -58,7 +58,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApiEndpoints();
 }
 
-// endpoint root untuk memeriksa status layanan
+// endpoint untuk sistem seperti health check dan database ping
 app.MapSystemEndpoints();
 
 app.Run();
