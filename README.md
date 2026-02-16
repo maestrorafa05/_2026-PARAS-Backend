@@ -1,17 +1,23 @@
 # PARAS Backend API
 
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![.NET](https://img.shields.io/badge/.NET-10.0-512BD4.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+
 **PARAS** (Platform Peminjaman Ruangan dan Sarana) adalah sistem backend untuk mengelola peminjaman ruangan dengan fitur lengkap meliputi manajemen ruangan, peminjaman, validasi ketersediaan, dan persetujuan status peminjaman.
 
 ---
 
-## Daftar Isi
+## 📋 Daftar Isi
 
-1. [Teknologi & Arsitektur](#-teknologi--arsitektur)
-2. [Cara Menjalankan Aplikasi](#-cara-menjalankan-aplikasi)
-3. [Konfigurasi User Secrets](#-konfigurasi-user-secrets)
-4. [Migration Commands](#-migration-commands)
-5. [Daftar Endpoint & Contoh Request](#-daftar-endpoint--contoh-request)
-6. [Business Rules](#-business-rules)
+1. [Current Version](#-current-version-v100)
+2. [Teknologi & Arsitektur](#-teknologi--arsitektur)
+3. [Cara Menjalankan Aplikasi](#-cara-menjalankan-aplikasi)
+4. [Konfigurasi User Secrets](#-konfigurasi-user-secrets)
+5. [Migration Commands](#-migration-commands)
+6. [Daftar Endpoint & Contoh Request](#-daftar-endpoint--contoh-request)
+7. [Business Rules](#-business-rules)
+8. [Versioning & Releases](#-versioning--releases)
 
 ---
 
@@ -578,7 +584,67 @@ public enum LoanStatus
 
 ---
 
-## Testing
+## 🏷️ Versioning & Releases
+
+Project ini menggunakan **Semantic Versioning** (SemVer) dengan format: `MAJOR.MINOR.PATCH`
+
+### Version Format
+- **MAJOR** (v1.x.x) - Breaking changes yang tidak backward compatible
+- **MINOR** (vx.1.x) - Penambahan fitur baru yang backward compatible
+- **PATCH** (vx.x.1) - Bug fixes dan improvements kecil
+
+### Current Release
+
+#### v1.0.0 (February 16, 2026)
+**Initial Stable Release**
+
+Features:
+- ✅ Complete Room management (CRUD operations)
+- ✅ Complete Loan management with validation
+- ✅ Loan status workflow: pending → approved/rejected/cancelled
+- ✅ Status change history tracking
+- ✅ Room availability checking
+- ✅ Conflict detection for overlapping bookings
+- ✅ Business rules validation (booking time, duration, advance booking)
+- ✅ Health checks endpoints
+- ✅ Comprehensive API documentation with Scalar
+- ✅ CORS configuration for frontend integration
+- ✅ Database migrations with EF Core
+
+Technical Stack:
+- .NET 10.0
+- Entity Framework Core 10.0
+- SQL Server
+- Minimal API architecture
+
+### Git Tags
+
+Untuk melihat semua versi/tags:
+```bash
+git tag
+```
+
+Checkout ke versi tertentu:
+```bash
+git checkout v1.0.0
+```
+
+Kembali ke versi terbaru:
+```bash
+git checkout main
+```
+
+### Release Notes
+
+Setiap release akan di-tag dengan format `vX.Y.Z` dan dilengkapi dengan:
+- Deskripsi perubahan utama
+- Breaking changes (jika ada)
+- Bug fixes
+- Known issues
+
+---
+
+## 🧪 Testing
 
 ### Via Scalar UI
 1. Run aplikasi: `dotnet run`
