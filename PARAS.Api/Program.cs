@@ -1,4 +1,7 @@
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpLogging;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc;
 using Scalar.AspNetCore;
 using PARAS.Api.Endpoints;
@@ -27,15 +30,28 @@ builder.Services.AddCors(options =>
 // db context untuk akses database
 builder.Services.AddDbContext<ParasDbContext>(opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// health checks untuk memantau kesehatan aplikasi
-builder.Services.AddHealthChecks();
-
 // konfigurasi options untuk aturan peminjaman
 builder.Services.Configure<BookingRulesOptions>(
     builder.Configuration.GetSection("BookingRules")
 );
 
 builder.Services.AddScoped<LoanRulesValidator>();
+
+// HTTP logging untuk mempermudah debug request dari Scalar/frontend
+builder.Services.AddHttpLogging(o =>
+{
+    o.LoggingFields =
+        HttpLoggingFields.RequestMethod |
+        HttpLoggingFields.RequestPath |
+        HttpLoggingFields.RequestQuery |
+        HttpLoggingFields.RequestHeaders |
+        HttpLoggingFields.ResponseStatusCode;
+});
+
+// Health checks
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => HealthCheckResult.Healthy())
+    .AddDbContextCheck<ParasDbContext>("db");
 
 var app = builder.Build();
 
@@ -57,6 +73,9 @@ app.UseExceptionHandler(exceptionApp =>
     });
 });
 
+// middleware untuk logging HTTP request/response
+app.UseHttpLogging();
+
 // middleware untuk mengaktifkan https, cors, dan dokumentasi API
 app.UseHttpsRedirection();
 app.UseCors("Frontend");
@@ -67,10 +86,25 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApiEndpoints();
 }
 
-// mapping endpoint untuk sistem dan ruangan
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = r => r.Name == "self"
+});
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = _ => true
+});
+
+if (app.Environment.IsDevelopment()){
+    await DbSeeder.SeedAsync(app.Services);
+}
+
+// mapping endpoint untuk setiap fitur
 app.MapSystemEndpoints();
 app.MapRoomEndpoints();
 app.MapLoanEndpoints();
 app.MapRoomAvailabilityEndpoints();
+
 
 app.Run();
