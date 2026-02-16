@@ -61,5 +61,6 @@ if (app.Environment.IsDevelopment())
 // mapping endpoint untuk sistem dan ruangan
 app.MapSystemEndpoints();
 app.MapRoomEndpoints();
+app.MapLoanEndpoints();
 
 app.Run();
