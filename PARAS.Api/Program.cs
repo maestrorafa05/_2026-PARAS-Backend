@@ -4,6 +4,8 @@ using Scalar.AspNetCore;
 using PARAS.Api.Endpoints;
 using Microsoft.EntityFrameworkCore;
 using PARAS.Api.Data;
+using PARAS.Api.Options;
+using PARAS.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +29,13 @@ builder.Services.AddDbContext<ParasDbContext>(opt => opt.UseSqlServer(builder.Co
 
 // health checks untuk memantau kesehatan aplikasi
 builder.Services.AddHealthChecks();
+
+// konfigurasi options untuk aturan peminjaman
+builder.Services.Configure<BookingRulesOptions>(
+    builder.Configuration.GetSection("BookingRules")
+);
+
+builder.Services.AddScoped<LoanRulesValidator>();
 
 var app = builder.Build();
 
@@ -62,5 +71,6 @@ if (app.Environment.IsDevelopment())
 app.MapSystemEndpoints();
 app.MapRoomEndpoints();
 app.MapLoanEndpoints();
+app.MapRoomAvailabilityEndpoints();
 
 app.Run();

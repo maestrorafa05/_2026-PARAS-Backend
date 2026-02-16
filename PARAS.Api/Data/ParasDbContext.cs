@@ -47,7 +47,7 @@ public class ParasDbContext : DbContext
             e.Property(x => x.NRP).HasMaxLength(20).IsRequired();
             e.Property(x => x.Notes).HasMaxLength(500);
 
-            e.HasIndex(x => new { x.RoomId, x.StartTime, x.EndTime });
+            e.HasIndex(x => new { x.RoomId, x.StartTime, x.EndTime, x.Status });
 
             e.HasOne(x => x.Room).WithMany(r => r.Loans).HasForeignKey(x => x.RoomId).OnDelete(DeleteBehavior.Restrict);
         });

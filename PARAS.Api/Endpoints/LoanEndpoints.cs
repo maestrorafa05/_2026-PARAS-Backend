@@ -5,6 +5,7 @@ using PARAS.Api.Domain.Entities;
 using PARAS.Api.Domain.Enums;
 using PARAS.Api.DTOs;
 using PARAS.Api.Services;
+using PARAS.Api.Options;
 
 namespace PARAS.Api.Endpoints;
 
@@ -76,7 +77,7 @@ public static class LoanEndpoints
             return Results.Ok(history);
         });
 
-        group.MapPost("/", async (CreateLoanRequest req, ParasDbContext db) =>
+        group.MapPost("/", async (CreateLoanRequest req, ParasDbContext db, LoanRulesValidator validator) =>
         {
             // validasi input data peminjaman
             if (string.IsNullOrWhiteSpace(req.NamaPeminjam))
@@ -93,6 +94,11 @@ public static class LoanEndpoints
             // validasi status aktif ruangan
             if (!room.IsActive)
                 return Results.BadRequest($"Ruangan '{room.Name}' tidak aktif dan tidak dapat dipinjam");
+
+            var now = DateTime.Now; // local time (WIB) karena kamu dev lokal
+            var errors = validator.Validate(req.StartTime, req.EndTime, now);
+            if (errors.Count > 0)
+                return Results.BadRequest(new { errors });
 
             // cek bentrok jadwal peminjaman dengan peminjaman lain yang sudah ada di database
             var conflict = await db.Loans.AnyAsync(l =>
