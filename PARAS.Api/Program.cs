@@ -58,7 +58,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApiEndpoints();
 }
 
-// endpoint untuk sistem seperti health check dan database ping
+// mapping endpoint untuk sistem dan ruangan
 app.MapSystemEndpoints();
+app.MapRoomEndpoints();
 
 app.Run();
