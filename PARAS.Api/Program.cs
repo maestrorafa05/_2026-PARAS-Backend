@@ -3,12 +3,15 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
 using Scalar.AspNetCore;
 using PARAS.Api.Endpoints;
 using Microsoft.EntityFrameworkCore;
 using PARAS.Api.Data;
 using PARAS.Api.Options;
 using PARAS.Api.Services;
+using PARAS.Api.Auth;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +32,23 @@ builder.Services.AddCors(options =>
 
 // db context untuk akses database
 builder.Services.AddDbContext<ParasDbContext>(opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// data protection untuk enkripsi data sensitif 
+builder.Services.AddDataProtection();
+
+// Identity Core (tanpa cookie)
+builder.Services.AddIdentityCore<AppUser>(options =>
+{   //
+    options.User.RequireUniqueEmail = false; 
+    options.Password.RequiredLength = 8;
+    options.Password.RequireDigit = true;
+    options.Password.RequireUppercase = false;
+    options.Password.RequireNonAlphanumeric = false;
+})
+.AddRoles<AppRole>()
+.AddEntityFrameworkStores<ParasDbContext>()
+.AddDefaultTokenProviders();
+
 
 // konfigurasi options untuk aturan peminjaman
 builder.Services.Configure<BookingRulesOptions>(

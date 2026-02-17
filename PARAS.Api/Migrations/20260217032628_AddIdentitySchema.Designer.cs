@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PARAS.Api.Data;
 
@@ -11,9 +12,11 @@ using PARAS.Api.Data;
 namespace PARAS.Api.Migrations
 {
     [DbContext(typeof(ParasDbContext))]
-    partial class ParasDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260217032628_AddIdentitySchema")]
+    partial class AddIdentitySchema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
