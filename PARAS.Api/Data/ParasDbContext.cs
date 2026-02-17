@@ -21,10 +21,14 @@ public class ParasDbContext : IdentityDbContext<AppUser, AppRole, Guid>
         // konfigurasi tambahan untuk AppUser (NRP sebagai identifier/login)
         modelBuilder.Entity<AppUser>(e =>
         {
-            e.Property(x => x.Nrp).HasMaxLength(20).IsRequired();
-            e.Property(x => x.FullName).HasMaxLength(100);
-            // NRP harus unique
-            e.HasIndex(x => x.Nrp).IsUnique();
+            modelBuilder.Entity<AppUser>(e =>
+            {
+                e.Property(x => x.Nrp).HasMaxLength(20).IsRequired();
+                e.Property(x => x.FullName).HasMaxLength(100).IsRequired();
+
+                e.HasIndex(x => x.Nrp).IsUnique();
+            });
+
         });
 
         // Ruangan memiliki banyak peminjaman

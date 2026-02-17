@@ -128,8 +128,8 @@ public static class LoanEndpoints
             UserManager<AppUser> userManager) =>
         {
             // validasi identitas user dari JWT
-            var nrp = GetNrp(ctx.User);
-            if (string.IsNullOrWhiteSpace(nrp))
+            var nrpClaim = GetNrp(ctx.User);
+            if (string.IsNullOrWhiteSpace(nrpClaim))
                 return Results.Unauthorized();
 
             var sub = ctx.User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
@@ -138,6 +138,19 @@ public static class LoanEndpoints
 
             var user = await userManager.FindByIdAsync(userId.ToString());
             if (user is null) return Results.Unauthorized();
+
+            // pastikan data user penting tidak null/kosong
+            var userNrp = user.Nrp?.Trim();
+            if (string.IsNullOrWhiteSpace(userNrp))
+                return Results.Problem("User NRP kosong di database.", statusCode: StatusCodes.Status500InternalServerError);
+
+            // optional: cek konsistensi claim vs db
+            if (!string.Equals(userNrp, nrpClaim, StringComparison.Ordinal))
+                return Results.Unauthorized();
+
+            var fullName = user.FullName?.Trim();
+            if (string.IsNullOrWhiteSpace(fullName))
+                fullName = userNrp; // fallback aman (atau ganti jadi Problem() kalau mau strict)
 
             // validasi waktu peminjaman
             if (req.StartTime >= req.EndTime)
@@ -175,8 +188,8 @@ public static class LoanEndpoints
                 RoomId = req.RoomId,
 
                 // identitas peminjam dari user login
-                NamaPeminjam = user.FullName,
-                NRP = user.Nrp,
+                NamaPeminjam = fullName,
+                NRP = userNrp,
 
                 StartTime = req.StartTime,
                 EndTime = req.EndTime,
