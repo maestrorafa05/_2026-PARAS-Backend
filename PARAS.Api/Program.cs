@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using Scalar.AspNetCore;
 using PARAS.Api.Endpoints;
 using Microsoft.EntityFrameworkCore;
@@ -72,6 +75,44 @@ builder.Services.AddHttpLogging(o =>
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy())
     .AddDbContextCheck<ParasDbContext>("db");
+
+// konfigurasi options untuk JWT
+builder.Services.Configure<JwtOptions>(
+    builder.Configuration.GetSection("Jwt")
+);
+
+// konfigurasi JWT authentication
+var jwt = builder.Configuration.GetSection("Jwt").Get<JwtOptions>()
+          ?? throw new InvalidOperationException("Jwt config is missing. Use user-secrets: Jwt:Issuer, Jwt:Audience, Jwt:Key");
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.RequireHttpsMetadata = false; // dev only
+        options.SaveToken = true;
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwt.Issuer,
+
+            ValidateAudience = true,
+            ValidAudience = jwt.Audience,
+
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Key)),
+
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromSeconds(30) // toleransi kecil
+        };
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    // Role policy (bisa dipakai nanti)
+    options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
+});
+
 
 var app = builder.Build();
 
