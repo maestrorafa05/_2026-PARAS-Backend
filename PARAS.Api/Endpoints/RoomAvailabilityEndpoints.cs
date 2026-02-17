@@ -9,7 +9,9 @@ public static class RoomAvailabilityEndpoints
 {
     public static IEndpointRouteBuilder MapRoomAvailabilityEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/rooms").WithTags("Rooms");
+        var group = app.MapGroup("/rooms")
+            .WithTags("Rooms")
+            .RequireAuthorization();
 
         // get daftar ruangan yang tersedia untuk rentang waktu tertentu
         group.MapGet("/available", async (DateTime start, DateTime end, ParasDbContext db) =>

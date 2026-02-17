@@ -39,11 +39,13 @@ public static class DbSeeder
 
         if (existing is null)
         {
+            var fullName = string.IsNullOrWhiteSpace(adminOpt.FullName) ? nrp : adminOpt.FullName.Trim();
+
             var admin = new AppUser
             {
                 Nrp = nrp,
                 UserName = nrp,              
-                FullName = adminOpt.FullName
+                FullName = fullName
             };
 
             var create = await userManager.CreateAsync(admin, adminOpt.Password);
@@ -58,6 +60,13 @@ public static class DbSeeder
         }
         else
         {
+            var fullName = string.IsNullOrWhiteSpace(adminOpt.FullName) ? nrp : adminOpt.FullName.Trim();
+            if (string.IsNullOrWhiteSpace(existing.FullName))
+            {
+                existing.FullName = fullName;
+                await userManager.UpdateAsync(existing);
+            }
+
             var isAdmin = await userManager.IsInRoleAsync(existing, "Admin");
             if (!isAdmin)
                 await userManager.AddToRoleAsync(existing, "Admin");

@@ -21,14 +21,9 @@ public class ParasDbContext : IdentityDbContext<AppUser, AppRole, Guid>
         // konfigurasi tambahan untuk AppUser (NRP sebagai identifier/login)
         modelBuilder.Entity<AppUser>(e =>
         {
-            modelBuilder.Entity<AppUser>(e =>
-            {
-                e.Property(x => x.Nrp).HasMaxLength(20).IsRequired();
-                e.Property(x => x.FullName).HasMaxLength(100).IsRequired();
-
-                e.HasIndex(x => x.Nrp).IsUnique();
-            });
-
+            e.Property(x => x.Nrp).HasMaxLength(20).IsRequired();
+            e.Property(x => x.FullName).HasMaxLength(150).IsRequired();
+            e.HasIndex(x => x.Nrp).IsUnique();
         });
 
         // Ruangan memiliki banyak peminjaman
@@ -83,7 +78,7 @@ public class ParasDbContext : IdentityDbContext<AppUser, AppRole, Guid>
             e.HasKey(x => x.Id);
 
             // konfigurasi untuk properti ChangedBy dan Comment dengan panjang maksimal
-            e.Property(x => x.ChangedBy).HasMaxLength(100);
+            e.Property(x => x.ChangedBy).HasMaxLength(100).IsRequired();
             e.Property(x => x.Comment).HasMaxLength(300);
             e.HasIndex(x => new { x.ChangedByUserId, x.ChangedAt });
 

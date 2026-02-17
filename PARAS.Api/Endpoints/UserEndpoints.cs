@@ -54,8 +54,11 @@ public static class UserEndpoints
                 return Results.BadRequest("NRP wajib diisi.");
             if (string.IsNullOrWhiteSpace(req.Password))
                 return Results.BadRequest("Password wajib diisi.");
+            if (string.IsNullOrWhiteSpace(req.FullName))
+                return Results.BadRequest("FullName wajib diisi.");
 
             var nrp = req.Nrp.Trim();
+            var fullName = req.FullName.Trim();
             var role = string.IsNullOrWhiteSpace(req.Role) ? "User" : req.Role.Trim();
 
             // validasi role harus ada
@@ -72,7 +75,7 @@ public static class UserEndpoints
             {
                 Nrp = nrp,
                 UserName = nrp, // login pakai NRP
-                FullName = req.FullName?.Trim()
+                FullName = fullName
             };
 
             var create = await userManager.CreateAsync(user, req.Password);

@@ -140,7 +140,7 @@ public static class LoanEndpoints
             if (user is null) return Results.Unauthorized();
 
             // pastikan data user penting tidak null/kosong
-            var userNrp = user.Nrp?.Trim();
+            var userNrp = user.Nrp.Trim();
             if (string.IsNullOrWhiteSpace(userNrp))
                 return Results.Problem("User NRP kosong di database.", statusCode: StatusCodes.Status500InternalServerError);
 
@@ -148,7 +148,7 @@ public static class LoanEndpoints
             if (!string.Equals(userNrp, nrpClaim, StringComparison.Ordinal))
                 return Results.Unauthorized();
 
-            var fullName = user.FullName?.Trim();
+            var fullName = user.FullName.Trim();
             if (string.IsNullOrWhiteSpace(fullName))
                 fullName = userNrp; // fallback aman (atau ganti jadi Problem() kalau mau strict)
 
@@ -190,6 +190,7 @@ public static class LoanEndpoints
                 // identitas peminjam dari user login
                 NamaPeminjam = fullName,
                 NRP = userNrp,
+                RequestedByUserId = userId,
 
                 StartTime = req.StartTime,
                 EndTime = req.EndTime,
@@ -223,6 +224,8 @@ public static class LoanEndpoints
             var nrp = GetNrp(ctx.User);
             if (string.IsNullOrWhiteSpace(nrp))
                 return Results.Unauthorized();
+            var sub = ctx.User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
+            var changedByUserId = Guid.TryParse(sub, out var parsedUserId) ? parsedUserId : (Guid?)null;
 
             var loan = await db.Loans.FirstOrDefaultAsync(l => l.Id == id);
             if (loan is null) return Results.NotFound();
@@ -247,6 +250,7 @@ public static class LoanEndpoints
                 LoanId = loan.Id,
                 FromStatus = from,
                 ToStatus = to,
+                ChangedByUserId = changedByUserId,
                 ChangedBy = nrp,
                 Comment = "Cancelled via DELETE",
                 ChangedAt = DateTime.UtcNow
@@ -266,6 +270,8 @@ public static class LoanEndpoints
             var nrp = GetNrp(ctx.User);
             if (string.IsNullOrWhiteSpace(nrp))
                 return Results.Unauthorized();
+            var sub = ctx.User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
+            var changedByUserId = Guid.TryParse(sub, out var parsedUserId) ? parsedUserId : (Guid?)null;
 
             var loan = await db.Loans.FirstOrDefaultAsync(l => l.Id == id);
             if (loan is null) return Results.NotFound("Loan tidak ditemukan.");
@@ -305,6 +311,7 @@ public static class LoanEndpoints
                 LoanId = loan.Id,
                 FromStatus = from,
                 ToStatus = to,
+                ChangedByUserId = changedByUserId,
                 ChangedBy = nrp,
                 Comment = req.Comment?.Trim(),
                 ChangedAt = DateTime.UtcNow

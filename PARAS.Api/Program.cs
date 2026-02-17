@@ -53,10 +53,7 @@ builder.Services.AddIdentityCore<AppUser>(options =>
 .AddRoles<AppRole>()
 .AddEntityFrameworkStores<ParasDbContext>()
 .AddDefaultTokenProviders()
-.AddRoles<AppRole>()
-.AddEntityFrameworkStores<ParasDbContext>()
-.AddSignInManager() 
-.AddDefaultTokenProviders();
+.AddSignInManager();
 
 
 // konfigurasi options untuk aturan peminjaman
@@ -90,6 +87,16 @@ builder.Services.Configure<JwtOptions>(
 // konfigurasi JWT authentication
 var jwt = builder.Configuration.GetSection("Jwt").Get<JwtOptions>()
           ?? throw new InvalidOperationException("Jwt config is missing. Use user-secrets: Jwt:Issuer, Jwt:Audience, Jwt:Key");
+if (string.IsNullOrWhiteSpace(jwt.Issuer) ||
+    string.IsNullOrWhiteSpace(jwt.Audience) ||
+    string.IsNullOrWhiteSpace(jwt.Key))
+{
+    throw new InvalidOperationException("Jwt config is incomplete. Ensure Jwt:Issuer, Jwt:Audience, and Jwt:Key are set.");
+}
+if (Encoding.UTF8.GetByteCount(jwt.Key) < 16)
+{
+    throw new InvalidOperationException("Jwt:Key must be at least 16 bytes for HS256.");
+}
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -172,7 +179,9 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
     Predicate = _ => true
 });
 
-if (app.Environment.IsDevelopment()){
+if (app.Environment.IsDevelopment())
+{
+    await AppDataSeeder.SeedAsync(app.Services);
     await DbSeeder.SeedAsync(app.Services);
 }
 

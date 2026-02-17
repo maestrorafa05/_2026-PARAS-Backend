@@ -10,7 +10,9 @@ public static class RoomEndpoints
     // endpoint untuk mengelola data ruangan
     public static IEndpointRouteBuilder MapRoomEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/rooms").WithTags("Rooms");
+        var group = app.MapGroup("/rooms")
+            .WithTags("Rooms")
+            .RequireAuthorization();
 
         // endpoint untuk mendapatkan daftar semua ruangan (public)
         group.MapGet("/", async (ParasDbContext db) =>
@@ -25,8 +27,7 @@ public static class RoomEndpoints
                 .ToListAsync();
 
             return Results.Ok(rooms);
-        })
-        .RequireAuthorization("AdminOnly"); // hanya admin yang bisa melihat daftar semua ruangan
+        });
 
         // endpoint untuk mendapatkan detail ruangan berdasarkan id (public)
         group.MapGet("/{id:guid}", async (Guid id, ParasDbContext db) =>
@@ -42,8 +43,7 @@ public static class RoomEndpoints
             return Results.Ok(new RoomResponse(
                 room.Id, room.Code, room.Name, room.Location, room.Capacity, room.Facilities, room.IsActive, room.CreatedAt, room.UpdatedAt
             ));
-        })
-        .RequireAuthorization("AdminOnly"); // hanya admin yang bisa melihat daftar semua ruangan
+        });
 
         // endpoint untuk membuat data ruangan baru (admin only)
         group.MapPost("/", async (CreateRoomRequest req, ParasDbContext db) =>
