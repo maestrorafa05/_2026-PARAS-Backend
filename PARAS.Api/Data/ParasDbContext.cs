@@ -22,6 +22,7 @@ public class ParasDbContext : IdentityDbContext<AppUser, AppRole, Guid>
         modelBuilder.Entity<AppUser>(e =>
         {
             e.Property(x => x.Nrp).HasMaxLength(20).IsRequired();
+            e.Property(x => x.FullName).HasMaxLength(100);
             // NRP harus unique
             e.HasIndex(x => x.Nrp).IsUnique();
         });

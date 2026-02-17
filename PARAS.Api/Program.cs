@@ -182,6 +182,7 @@ app.MapSystemEndpoints();
 app.MapRoomEndpoints();
 app.MapLoanEndpoints();
 app.MapAuthEndpoints();
+app.MapUserEndpoints();
 app.MapRoomAvailabilityEndpoints();
 
 
