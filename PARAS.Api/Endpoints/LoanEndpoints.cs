@@ -21,11 +21,12 @@ public static class LoanEndpoints
         {
             // claim "nrp" kamu sudah ada di JWT (terlihat dari payload token)
             return user.FindFirst("nrp")?.Value
+                   ?? user.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
                    ?? user.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.UniqueName)?.Value;
         }
 
         static bool IsAdmin(System.Security.Claims.ClaimsPrincipal user)
-            => user.IsInRole("Admin");
+            => user.IsAdmin();
 
         // endpoint untuk mendapatkan daftar semua peminjaman
         // - Admin: lihat semua
@@ -132,8 +133,8 @@ public static class LoanEndpoints
             if (string.IsNullOrWhiteSpace(nrpClaim))
                 return Results.Unauthorized();
 
-            var sub = ctx.User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
-            if (string.IsNullOrWhiteSpace(sub) || !Guid.TryParse(sub, out var userId))
+            var userId = ctx.User.GetUserId();
+            if (userId == Guid.Empty)
                 return Results.Unauthorized();
 
             var user = await userManager.FindByIdAsync(userId.ToString());
@@ -224,8 +225,8 @@ public static class LoanEndpoints
             var nrp = GetNrp(ctx.User);
             if (string.IsNullOrWhiteSpace(nrp))
                 return Results.Unauthorized();
-            var sub = ctx.User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
-            var changedByUserId = Guid.TryParse(sub, out var parsedUserId) ? parsedUserId : (Guid?)null;
+            var userId = ctx.User.GetUserId();
+            var changedByUserId = userId == Guid.Empty ? (Guid?)null : userId;
 
             var loan = await db.Loans.FirstOrDefaultAsync(l => l.Id == id);
             if (loan is null) return Results.NotFound();
@@ -270,8 +271,8 @@ public static class LoanEndpoints
             var nrp = GetNrp(ctx.User);
             if (string.IsNullOrWhiteSpace(nrp))
                 return Results.Unauthorized();
-            var sub = ctx.User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
-            var changedByUserId = Guid.TryParse(sub, out var parsedUserId) ? parsedUserId : (Guid?)null;
+            var userId = ctx.User.GetUserId();
+            var changedByUserId = userId == Guid.Empty ? (Guid?)null : userId;
 
             var loan = await db.Loans.FirstOrDefaultAsync(l => l.Id == id);
             if (loan is null) return Results.NotFound("Loan tidak ditemukan.");

@@ -53,11 +53,8 @@ public static class AuthEndpoints
         // endpoint untuk cek user yang sedang login (JWT harus valid)
         group.MapGet("/me", async (HttpContext ctx, UserManager<AppUser> userManager) =>
         {
-            var userId = ctx.User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
-            if (string.IsNullOrWhiteSpace(userId))
-                return Results.Unauthorized();
-
-            if (!Guid.TryParse(userId, out var guid))
+            var guid = ctx.User.GetUserId();
+            if (guid == Guid.Empty)
                 return Results.Unauthorized();
 
             var user = await userManager.FindByIdAsync(guid.ToString());

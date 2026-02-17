@@ -48,6 +48,7 @@ builder.Services.AddIdentityCore<AppUser>(options =>
     options.Password.RequiredLength = 8;
     options.Password.RequireDigit = true;
     options.Password.RequireUppercase = false;
+    options.Password.RequireLowercase = false;
     options.Password.RequireNonAlphanumeric = false;
 })
 .AddRoles<AppRole>()
