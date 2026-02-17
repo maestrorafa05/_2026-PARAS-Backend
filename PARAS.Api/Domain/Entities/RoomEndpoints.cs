@@ -26,7 +26,7 @@ public static class RoomEndpoints
 
             return Results.Ok(rooms);
         })
-        .AllowAnonymous(); // explicit: boleh tanpa login
+        .RequireAuthorization("AdminOnly"); // hanya admin yang bisa melihat daftar semua ruangan
 
         // endpoint untuk mendapatkan detail ruangan berdasarkan id (public)
         group.MapGet("/{id:guid}", async (Guid id, ParasDbContext db) =>
@@ -43,7 +43,7 @@ public static class RoomEndpoints
                 room.Id, room.Code, room.Name, room.Location, room.Capacity, room.Facilities, room.IsActive, room.CreatedAt, room.UpdatedAt
             ));
         })
-        .AllowAnonymous(); // explicit: boleh tanpa login
+        .RequireAuthorization("AdminOnly"); // hanya admin yang bisa melihat daftar semua ruangan
 
         // endpoint untuk membuat data ruangan baru (admin only)
         group.MapPost("/", async (CreateRoomRequest req, ParasDbContext db) =>

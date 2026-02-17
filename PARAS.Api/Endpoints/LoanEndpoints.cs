@@ -1,5 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using PARAS.Api.Auth;
 using PARAS.Api.Data;
@@ -16,9 +15,9 @@ public static class LoanEndpoints
     {
         var group = app.MapGroup("/loans")
             .WithTags("Loans")
-            .RequireAuthorization();
+            .RequireAuthorization(); // minimal: harus login
 
-        // endpoint untuk mendapatkan daftar semua peminjaman (admin only)
+        // endpoint untuk mendapatkan daftar semua peminjaman (khusus Admin)
         group.MapGet("/", async (ParasDbContext db) =>
         {
             var loans = await db.Loans
@@ -35,24 +34,18 @@ public static class LoanEndpoints
                 .ToListAsync();
 
             return Results.Ok(loans);
-        })
-        .RequireAuthorization("AdminOnly");
+        }).RequireAuthorization("AdminOnly");
 
-        // endpoint untuk melihat peminjaman milik user yang sedang login
-        group.MapGet("/mine", async (HttpContext ctx, ParasDbContext db, UserManager<AppUser> userManager) =>
+        // endpoint untuk melihat peminjaman milik sendiri (user yang sedang login)
+        group.MapGet("/mine", async (HttpContext ctx, ParasDbContext db) =>
         {
-            // ambil userId dari JWT (sub) agar paling akurat
-            var userId = ctx.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
-            if (string.IsNullOrWhiteSpace(userId) || !Guid.TryParse(userId, out var guid))
-                return Results.Unauthorized();
-
-            var user = await userManager.FindByIdAsync(guid.ToString());
-            if (user is null) return Results.Unauthorized();
+            var userId = ctx.User.GetUserId();
+            if (userId == Guid.Empty) return Results.Unauthorized();
 
             var loans = await db.Loans
                 .AsNoTracking()
                 .Include(l => l.Room)
-                .Where(l => l.NRP == user.Nrp)
+                .Where(l => l.RequestedByUserId == userId)
                 .OrderByDescending(l => l.CreatedAt)
                 .Select(l => new LoanResponse(
                     l.Id, l.RoomId, l.Room.Code, l.Room.Name,
@@ -66,8 +59,8 @@ public static class LoanEndpoints
             return Results.Ok(loans);
         });
 
-        // endpoint untuk mendapatkan detail peminjaman berdasarkan id (admin atau pemilik)
-        group.MapGet("/{id:guid}", async (Guid id, HttpContext ctx, ParasDbContext db, UserManager<AppUser> userManager) =>
+        // endpoint untuk mendapatkan detail peminjaman berdasarkan id (Admin atau Owner)
+        group.MapGet("/{id:guid}", async (Guid id, HttpContext ctx, ParasDbContext db) =>
         {
             var loan = await db.Loans
                 .AsNoTracking()
@@ -76,20 +69,11 @@ public static class LoanEndpoints
 
             if (loan is null) return Results.NotFound();
 
-            // cek akses: admin boleh, user hanya boleh akses miliknya
-            var isAdmin = ctx.User.IsInRole("Admin");
+            var userId = ctx.User.GetUserId();
+            var isAdmin = ctx.User.IsAdmin();
 
-            // ambil NRP user login (pakai sub -> DB, fallback claim "nrp")
-            string? myNrp = ctx.User.FindFirst("nrp")?.Value;
-
-            var userId = ctx.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
-            if (!isAdmin && Guid.TryParse(userId, out var guid))
-            {
-                var user = await userManager.FindByIdAsync(guid.ToString());
-                myNrp = user?.Nrp ?? myNrp;
-            }
-
-            if (!isAdmin && !string.Equals(loan.NRP, myNrp, StringComparison.OrdinalIgnoreCase))
+            // kalau bukan admin, pastikan hanya owner yang bisa akses
+            if (!isAdmin && loan.RequestedByUserId != userId)
                 return Results.Forbid();
 
             return Results.Ok(new LoanResponse(
@@ -101,29 +85,17 @@ public static class LoanEndpoints
             ));
         });
 
-        // endpoint untuk mendapatkan riwayat perubahan status peminjaman (admin atau pemilik)
-        group.MapGet("/{id:guid}/history", async (Guid id, HttpContext ctx, ParasDbContext db, UserManager<AppUser> userManager) =>
+        // endpoint untuk mendapatkan riwayat perubahan status peminjaman (Admin atau Owner)
+        group.MapGet("/{id:guid}/history", async (Guid id, HttpContext ctx, ParasDbContext db) =>
         {
-            // ambil loan dulu untuk cek ownership
-            var loan = await db.Loans
-                .AsNoTracking()
-                .FirstOrDefaultAsync(l => l.Id == id);
-
+            var loan = await db.Loans.AsNoTracking().FirstOrDefaultAsync(l => l.Id == id);
             if (loan is null) return Results.NotFound("Loan tidak ditemukan.");
 
-            var isAdmin = ctx.User.IsInRole("Admin");
+            var userId = ctx.User.GetUserId();
+            var isAdmin = ctx.User.IsAdmin();
 
-            // ambil NRP user login (pakai sub -> DB, fallback claim "nrp")
-            string? myNrp = ctx.User.FindFirst("nrp")?.Value;
-
-            var userId = ctx.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
-            if (!isAdmin && Guid.TryParse(userId, out var guid))
-            {
-                var user = await userManager.FindByIdAsync(guid.ToString());
-                myNrp = user?.Nrp ?? myNrp;
-            }
-
-            if (!isAdmin && !string.Equals(loan.NRP, myNrp, StringComparison.OrdinalIgnoreCase))
+            // kalau bukan admin, pastikan hanya owner yang bisa akses
+            if (!isAdmin && loan.RequestedByUserId != userId)
                 return Results.Forbid();
 
             var history = await db.LoanStatusHistories
@@ -144,14 +116,15 @@ public static class LoanEndpoints
             return Results.Ok(history);
         });
 
-        // endpoint untuk membuat peminjaman baru (user & admin)
-        group.MapPost("/", async (
-            CreateLoanRequest req,
-            HttpContext ctx,
-            ParasDbContext db,
-            LoanRulesValidator validator,
-            UserManager<AppUser> userManager) =>
+        // endpoint untuk membuat peminjaman (pemilik diambil dari JWT login)
+        group.MapPost("/", async (CreateLoanRequest req, HttpContext ctx, ParasDbContext db, LoanRulesValidator validator) =>
         {
+            // validasi input data peminjaman
+            if (string.IsNullOrWhiteSpace(req.NamaPeminjam))
+                return Results.BadRequest("NamaPeminjam tidak boleh kosong!");
+            if (string.IsNullOrWhiteSpace(req.NRP))
+                return Results.BadRequest("NRP tidak boleh kosong!");
+
             // validasi waktu peminjaman
             if (req.StartTime >= req.EndTime)
                 return Results.BadRequest("StartTime harus lebih awal dari EndTime!");
@@ -165,46 +138,12 @@ public static class LoanEndpoints
             if (!room.IsActive)
                 return Results.BadRequest($"Ruangan '{room.Name}' tidak aktif dan tidak dapat dipinjam");
 
-            // rules validator (jam operasional/durasi/min lead time, dll)
             var now = DateTime.Now; // local time (WIB) karena kamu dev lokal
             var errors = validator.Validate(req.StartTime, req.EndTime, now);
             if (errors.Count > 0)
                 return Results.BadRequest(new { errors });
 
-            // tentukan identitas peminjam:
-            // - admin boleh create untuk user lain (pakai req.NRP & req.NamaPeminjam)
-            // - user biasa: pakai NRP & FullName dari user login (anti impersonation)
-            var isAdmin = ctx.User.IsInRole("Admin");
-
-            string nrp;
-            string nama;
-
-            if (isAdmin)
-            {
-                // validasi input data peminjaman (khusus admin create atas nama orang lain)
-                if (string.IsNullOrWhiteSpace(req.NamaPeminjam))
-                    return Results.BadRequest("NamaPeminjam tidak boleh kosong!");
-                if (string.IsNullOrWhiteSpace(req.NRP))
-                    return Results.BadRequest("NRP tidak boleh kosong!");
-
-                nrp = req.NRP.Trim();
-                nama = req.NamaPeminjam.Trim();
-            }
-            else
-            {
-                // user biasa: ambil dari token (sub -> DB), fallback claim "nrp"
-                var userId = ctx.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
-                if (string.IsNullOrWhiteSpace(userId) || !Guid.TryParse(userId, out var guid))
-                    return Results.Unauthorized();
-
-                var user = await userManager.FindByIdAsync(guid.ToString());
-                if (user is null) return Results.Unauthorized();
-
-                nrp = user.Nrp.Trim();
-                nama = (user.FullName ?? "User").Trim();
-            }
-
-            // cek bentrok jadwal peminjaman dengan peminjaman lain yang masih aktif (bukan rejected/cancelled)
+            // cek bentrok jadwal peminjaman dengan peminjaman lain yang sudah ada di database
             var conflict = await db.Loans.AnyAsync(l =>
                 l.RoomId == req.RoomId &&
                 l.Status != LoanStatus.rejected &&
@@ -217,11 +156,18 @@ public static class LoanEndpoints
             if (conflict)
                 return Results.Conflict("Jadwal bentrok, ruangan sudah dipinjam pada rentang waktu tersebut");
 
+            var userId = ctx.User.GetUserId();
+            if (userId == Guid.Empty) return Results.Unauthorized();
+
             var loan = new Loan
             {
                 RoomId = req.RoomId,
-                NamaPeminjam = nama,
-                NRP = nrp,
+                NamaPeminjam = req.NamaPeminjam.Trim(),
+                NRP = req.NRP.Trim(),
+
+                // ownership
+                RequestedByUserId = userId,
+
                 StartTime = req.StartTime,
                 EndTime = req.EndTime,
                 Notes = req.Notes?.Trim(),
@@ -247,32 +193,24 @@ public static class LoanEndpoints
             ));
         });
 
-        // endpoint untuk membatalkan peminjaman (admin atau pemilik)
-        group.MapDelete("/{id:guid}", async (Guid id, HttpContext ctx, ParasDbContext db, UserManager<AppUser> userManager) =>
+        // endpoint untuk membatalkan peminjaman (Owner atau Admin)
+        group.MapDelete("/{id:guid}", async (Guid id, HttpContext ctx, ParasDbContext db) =>
         {
             // cari peminjaman berdasarkan id
             var loan = await db.Loans.FirstOrDefaultAsync(l => l.Id == id);
             if (loan is null) return Results.NotFound();
 
-            // cek akses: admin boleh, user hanya boleh cancel miliknya
-            var isAdmin = ctx.User.IsInRole("Admin");
+            var userId = ctx.User.GetUserId();
+            var isAdmin = ctx.User.IsAdmin();
 
-            string? myNrp = ctx.User.FindFirst("nrp")?.Value;
-            var userId = ctx.User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
-            if (!isAdmin && Guid.TryParse(userId, out var guid))
-            {
-                var user = await userManager.FindByIdAsync(guid.ToString());
-                myNrp = user?.Nrp ?? myNrp;
-            }
-
-            if (!isAdmin && !string.Equals(loan.NRP, myNrp, StringComparison.OrdinalIgnoreCase))
+            // kalau bukan admin, pastikan hanya owner yang bisa cancel
+            if (!isAdmin && loan.RequestedByUserId != userId)
                 return Results.Forbid();
 
             // hanya peminjaman yang belum final yang bisa dibatalkan
             if (loan.Status is LoanStatus.rejected or LoanStatus.cancelled)
                 return Results.Conflict("Loan sudah final, tidak bisa dibatalkan.");
 
-            // ubah status peminjaman menjadi cancelled
             var from = loan.Status;
             var to = LoanStatus.cancelled;
 
@@ -283,13 +221,16 @@ public static class LoanEndpoints
             loan.Status = to;
             loan.UpdatedAt = DateTime.UtcNow;
 
-            // simpan riwayat perubahan status
+            // changedBy ambil dari JWT (admin/user)
+            var changedBy = ctx.User.GetNrp() ?? "unknown";
+
             db.LoanStatusHistories.Add(new LoanStatusHistory
             {
                 LoanId = loan.Id,
                 FromStatus = from,
                 ToStatus = to,
-                ChangedBy = isAdmin ? "admin" : (myNrp ?? "user"),
+                ChangedBy = changedBy,
+                ChangedByUserId = userId == Guid.Empty ? null : userId,
                 Comment = "Cancelled via DELETE",
                 ChangedAt = DateTime.UtcNow
             });
@@ -298,15 +239,11 @@ public static class LoanEndpoints
             return Results.NoContent();
         });
 
-        // endpoint untuk mengubah status peminjaman (admin only)
-        group.MapPatch("/{id:guid}/status", async (Guid id, ChangeLoanStatusRequest req, ParasDbContext db) =>
+        // endpoint untuk mengubah status loan (khusus Admin)
+        group.MapPatch("/{id:guid}/status", async (Guid id, ChangeLoanStatusRequest req, HttpContext ctx, ParasDbContext db) =>
         {
             var loan = await db.Loans.FirstOrDefaultAsync(l => l.Id == id);
             if (loan is null) return Results.NotFound("Loan tidak ditemukan.");
-
-            // validasi input
-            if (string.IsNullOrWhiteSpace(req.admin))
-                return Results.BadRequest("admin wajib diisi.");
 
             var from = loan.Status;
             var to = req.ToStatus;
@@ -337,18 +274,22 @@ public static class LoanEndpoints
             loan.Status = to;
             loan.UpdatedAt = DateTime.UtcNow;
 
+            // changedBy ambil dari JWT admin
+            var adminId = ctx.User.GetUserId();
+            var changedBy = ctx.User.GetNrp() ?? "admin";
+
             // simpan perubahan ke database (history)
             var history = new LoanStatusHistory
             {
                 LoanId = loan.Id,
                 FromStatus = from,
                 ToStatus = to,
-                ChangedBy = req.admin.Trim(),
+                ChangedBy = changedBy,
+                ChangedByUserId = adminId == Guid.Empty ? null : adminId,
                 Comment = req.Comment?.Trim(),
                 ChangedAt = DateTime.UtcNow
             };
 
-            // simpan riwayat perubahan status ke database
             db.LoanStatusHistories.Add(history);
             await db.SaveChangesAsync();
 
@@ -359,8 +300,7 @@ public static class LoanEndpoints
                 toStatus = to,
                 changedAt = history.ChangedAt
             });
-        })
-        .RequireAuthorization("AdminOnly");
+        }).RequireAuthorization("AdminOnly");
 
         return app;
     }

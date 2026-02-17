@@ -14,6 +14,7 @@ public class LoanStatusHistory
     public LoanStatus ToStatus {get; set;}
 
     // informasi tambahan untuk pelacakan perubahan status
+    public Guid? ChangedByUserId { get; set; }
     public string? ChangedBy {get; set;} = "System";
     public string? Comment {get; set;}
     public DateTime ChangedAt {get; set;} = DateTime.UtcNow;

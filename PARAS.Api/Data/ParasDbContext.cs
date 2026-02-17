@@ -53,10 +53,14 @@ public class ParasDbContext : IdentityDbContext<AppUser, AppRole, Guid>
             });
 
             e.HasKey(x => x.Id);
-
+            // konfigurasi untuk properti NamaPeminjam, NRP, dan Notes dengan panjang maksimal
             e.Property(x => x.NamaPeminjam).HasMaxLength(100).IsRequired();
             e.Property(x => x.NRP).HasMaxLength(20).IsRequired();
             e.Property(x => x.Notes).HasMaxLength(500);
+            // untuk mencatat siapa yang membuat/mengubah data peminjaman, wajib diisi
+            e.Property(x => x.RequestedByUserId).IsRequired();
+            e.HasIndex(x => new { x.RequestedByUserId, x.CreatedAt });
+
 
             // index untuk query bentrok jadwal / availability
             e.HasIndex(x => new { x.RoomId, x.StartTime, x.EndTime, x.Status });
@@ -77,6 +81,7 @@ public class ParasDbContext : IdentityDbContext<AppUser, AppRole, Guid>
             // konfigurasi untuk properti ChangedBy dan Comment dengan panjang maksimal
             e.Property(x => x.ChangedBy).HasMaxLength(100);
             e.Property(x => x.Comment).HasMaxLength(300);
+            e.HasIndex(x => new { x.ChangedByUserId, x.ChangedAt });
 
             e.HasIndex(x => new { x.LoanId, x.ChangedAt });
 

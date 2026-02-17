@@ -22,6 +22,8 @@ public class Loan
     // timestamps untuk pencatatan waktu pembuatan dan pembaruan data
     public DateTime CreatedAt {get; set;} = DateTime.UtcNow;
     public DateTime UpdatedAt {get; set;} = DateTime.UtcNow;
+    // untuk mencatat siapa yang membuat/mengubah data peminjaman 
+    public Guid RequestedByUserId { get; set; } 
 
     // riwayat perubahan status peminjaman
     public List<LoanStatusHistory> StatusHistories {get; set;} = new();
