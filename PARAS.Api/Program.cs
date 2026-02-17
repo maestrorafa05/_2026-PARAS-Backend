@@ -14,6 +14,7 @@ using PARAS.Api.Data;
 using PARAS.Api.Options;
 using PARAS.Api.Services;
 using PARAS.Api.Auth;
+using PARAS.Api.Services.Auth;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -41,7 +42,7 @@ builder.Services.AddDataProtection();
 
 // Identity Core (tanpa cookie)
 builder.Services.AddIdentityCore<AppUser>(options =>
-{   //
+{   
     options.User.RequireUniqueEmail = false; 
     options.Password.RequiredLength = 8;
     options.Password.RequireDigit = true;
@@ -50,6 +51,10 @@ builder.Services.AddIdentityCore<AppUser>(options =>
 })
 .AddRoles<AppRole>()
 .AddEntityFrameworkStores<ParasDbContext>()
+.AddDefaultTokenProviders()
+.AddRoles<AppRole>()
+.AddEntityFrameworkStores<ParasDbContext>()
+.AddSignInManager() 
 .AddDefaultTokenProviders();
 
 
@@ -113,6 +118,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
 });
 
+builder.Services.AddScoped<JwtTokenService>();
 
 var app = builder.Build();
 
@@ -169,6 +175,7 @@ if (app.Environment.IsDevelopment()){
 app.MapSystemEndpoints();
 app.MapRoomEndpoints();
 app.MapLoanEndpoints();
+app.MapAuthEndpoints();
 app.MapRoomAvailabilityEndpoints();
 
 
