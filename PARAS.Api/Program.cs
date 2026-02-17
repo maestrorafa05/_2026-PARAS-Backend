@@ -141,6 +141,10 @@ app.UseHttpLogging();
 app.UseHttpsRedirection();
 app.UseCors("Frontend");
 
+// middleware untuk autentikasi dan otorisasi
+app.UseAuthentication();
+app.UseAuthorization();
+
 // hanya tampilkan dokumentasi API di lingkungan development
 if (app.Environment.IsDevelopment())
 {

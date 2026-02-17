@@ -19,6 +19,21 @@ public static class SystemEndpoints
             return Results.Ok(new {canConnect});
         }).WithTags("System");
 
+        // endpoint untuk cek siapa user yang sedang login
+        app.MapGet("/system/whoami", (HttpContext ctx) =>
+        {
+            var user = ctx.User;
+
+            return Results.Ok(new
+            {
+                isAuthenticated = user.Identity?.IsAuthenticated ?? false,
+                name = user.Identity?.Name,
+                claims = user.Claims.Select(c => new { c.Type, c.Value })
+            });
+        })
+        .WithTags("System")
+        .RequireAuthorization();
+
         return app;
     }
 }
