@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace PARAS.Api.Data;
 
-public static class DbSeeder
+public static class AppDataSeeder
 {
     public static async Task SeedAsync(IServiceProvider services)
     {

@@ -15,6 +15,7 @@ using PARAS.Api.Options;
 using PARAS.Api.Services;
 using PARAS.Api.Auth;
 using PARAS.Api.Services.Auth;
+using PARAS.Api.Data.Seeding;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -119,6 +120,11 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddScoped<JwtTokenService>();
+
+
+builder.Services.Configure<AdminSeedOptions>(
+    builder.Configuration.GetSection("SeedAdmin")
+);
 
 var app = builder.Build();
 
