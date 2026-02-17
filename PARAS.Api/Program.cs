@@ -115,7 +115,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization(options =>
 {
-    // Role policy (bisa dipakai nanti)
     options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
 });
 

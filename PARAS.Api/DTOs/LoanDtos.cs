@@ -19,11 +19,8 @@ public record LoanResponse(
 
 public record CreateLoanRequest(
     Guid RoomId,
-    string NamaPeminjam,
-    string NRP,
     DateTime StartTime,
     DateTime EndTime,
-    LoanStatus Status,
     string? Notes
 );
 
